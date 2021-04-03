@@ -1,0 +1,114 @@
+
+DROP DATABASE IF EXISTS workoutLogDB;
+CREATE DATABASE workoutLogDB;
+USE workoutLogDB;
+
+# user list
+CREATE TABLE UserListing (
+    userID        INT     NOT NULL AUTO_INCREMENT,
+    primary key (userID),
+    userName      varchar(60),
+    password      varchar(64),
+    email         varchar(60),
+    registerDate  date
+);
+INSERT INTO UserListing values
+(1, 'John', 'Smith', 'john.smith@yahoo.com', '2019-12-15'),
+(2, 'Sebastine', 'Yohon', 'sebastine.yohon@yahoo.com', '2019-06-28'),
+(3, 'Schoman', 'Bethoven', 'schoman.bethoven@yahoo.com', '2019-07-08'),
+(4, 'Bach', 'Motzart', 'bach.motzart@yahoo.com', '2019-02-18');
+
+# cardio type list
+CREATE TABLE cardioTypes (
+    typeID         INT NOT NULL AUTO_INCREMENT,
+    primary key (typeID),
+    typeName       char(10)
+);
+INSERT INTO cardioTypes VALUES
+(1, 'Running'),
+(2, 'Swimming'),
+(3, 'Biking');
+
+# workouts form log table
+CREATE TABLE workoutsFormLog (
+    userID             INT  NOT NULL  AUTO_INCREMENT,
+    workoutID          INT,
+    pushups            INT,
+    situps             INT,
+    stretch            INT,
+    cardiotype         INT,
+    distance           INT,
+    heartRate          INT,
+    PRIMARY KEY (workoutID),
+    FOREIGN KEY (userID) REFERENCES UserListing(userID)
+);
+# sample data
+INSERT INTO workoutsFormLog values
+(1, 1, 15, 55, 1, 1, 2, 60),
+(1, 2, 5, 50, 1, 1, 3, 62),
+(2, 3, 15, 20, 1, 0, 0, 60),
+(3, 4, 25, 55, 1, 1, 2, 50),
+(4, 5, 30, 15, 0, 0, 0, 70);
+
+# individual totals table
+CREATE TABLE individualTotals (
+    userID             INT NOT NULL AUTO_INCREMENT UNIQUE,
+    FOREIGN KEY (userID) REFERENCES UserListing(userID),
+    pushupTotal        INT,
+    situpTotal         INT,
+    stretchTotal       INT,
+    mostMiles          INT,
+    heartRateAverage   INT
+);
+
+INSERT INTO individualTotals
+(pushupTotal, situpTotal, stretchTotal, mostMiles, heartRateAverage)
+SELECT SUM(pushups), sum(situps), sum(stretch), sum(distance), avg(heartRate)
+FROM workoutsFormLog WHERE userID = 1;
+
+INSERT INTO individualTotals
+(pushupTotal, situpTotal, stretchTotal, mostMiles, heartRateAverage)
+SELECT SUM(pushups), sum(situps), sum(stretch), sum(distance), avg(heartRate)
+FROM workoutsFormLog WHERE userID = 2;
+
+INSERT INTO individualTotals
+(pushupTotal, situpTotal, stretchTotal, mostMiles, heartRateAverage)
+SELECT SUM(pushups), sum(situps), sum(stretch), sum(distance), avg(heartRate)
+FROM workoutsFormLog WHERE userID = 3;
+
+INSERT INTO individualTotals
+(pushupTotal, situpTotal, stretchTotal, mostMiles, heartRateAverage)
+SELECT SUM(pushups), sum(situps), sum(stretch), sum(distance), avg(heartRate)
+FROM workoutsFormLog WHERE userID = 4;
+
+# leader board table
+CREATE TABLE leaderBoard (
+    placeID            INT AUTO_INCREMENT,
+    pushupTotal        INT,
+    situpTotal         INT,
+    stretchTotal       INT,
+    mostMiles          INT,
+    PRIMARY KEY (placeID)
+);
+INSERT INTO leaderBoard value
+(
+1,
+(SELECT userID FROM `individualtotals` WHERE pushupTotal = (SELECT MAX(pushupTotal) FROM `individualtotals`)),
+(SELECT userID FROM `individualtotals` WHERE situpTotal = (SELECT MAX(situpTotal) FROM `individualtotals`)),
+(SELECT userID FROM `individualtotals` WHERE stretchTotal = (SELECT MAX(stretchTotal) FROM `individualtotals`)),
+(SELECT userID FROM `individualtotals` WHERE mostMiles = (SELECT MAX(mostMiles) FROM `individualtotals`))
+);
+
+
+# create users
+DROP USER 'dba'@'localhost';
+DROP USER 'standard'@'localhost';
+
+CREATE USER 'dba'@'localhost' IDENTIFIED BY 'admin';
+GRANT ALL PRIVILEGES ON workoutLogDB TO dba;
+
+CREATE USER 'standard'@'localhost' IDENTIFIED BY 'passwd';
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON UserListing TO 'standard'@'localhost';
+
+#SELECT userName,email,registerDate,mostMiles FROM `userlisting` INNER JOIN `individualtotals` ON `userlisting`.userID = `individualtotals`.userID ORDER BY userlisting.userID ASC
